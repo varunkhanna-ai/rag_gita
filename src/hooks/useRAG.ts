@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ChunkingStrategy, LLMProvider, RetrievalResult } from "@/types";
 import { vectorStore } from "@/lib/vector-store/store";
 import { reranker } from "@/lib/reranker/cross-encoder";
 import { embedder } from "@/lib/embeddings/embedder";
 import { LocalLLM } from "@/lib/llm/local";
 import { OpenRouterLLM } from "@/lib/llm/openrouter";
+import { OpenAILLM } from "@/lib/llm/openai";
 import { GeminiLLM } from "@/lib/llm/gemini";
 import { GroqLLM } from "@/lib/llm/groq";
 
@@ -16,7 +17,25 @@ export function useRAG() {
   const [emotion, setEmotion] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [provider, setProvider] = useState<LLMProvider>("local");
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey, setApiKeyInner] = useState("");
+
+  useEffect(() => {
+    const savedProvider = sessionStorage.getItem("emotion-rag-provider");
+    if (savedProvider) setProvider(savedProvider as LLMProvider);
+    const savedKey = sessionStorage.getItem(`emotion-rag-api-key-${savedProvider || provider}`);
+    if (savedKey) setApiKeyInner(savedKey);
+  }, []);
+
+  const setApiKey = useCallback((key: string) => {
+    setApiKeyInner(key);
+  }, []);
+
+  const setProviderWithStorage = useCallback((p: LLMProvider) => {
+    sessionStorage.setItem("emotion-rag-provider", p);
+    const savedKey = sessionStorage.getItem(`emotion-rag-api-key-${p}`);
+    setApiKeyInner(savedKey || "");
+    setProvider(p);
+  }, []);
 
   const [answer, setAnswer] = useState("");
   const [sources, setSources] = useState<RetrievalResult[]>([]);
@@ -33,7 +52,6 @@ export function useRAG() {
     setSources([]);
 
     try {
-      setStatusMessage("Loading index...");
       await vectorStore.loadIndex(strategy);
 
       setStatusMessage("Embedding query...");
@@ -74,6 +92,15 @@ export function useRAG() {
           );
           break;
         }
+        case "openai": {
+          if (!apiKey) throw new Error("API key required for OpenAI");
+          generatedAnswer = await new OpenAILLM(apiKey).generate(
+            query,
+            contextResults,
+            emotion
+          );
+          break;
+        }
         case "openrouter": {
           if (!apiKey) throw new Error("API key required for OpenRouter");
           generatedAnswer = await new OpenRouterLLM(apiKey).generate(
@@ -108,8 +135,9 @@ export function useRAG() {
       setAnswer(generatedAnswer);
       setSources(reranked);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "An error occurred";
-      setError(`${msg} (Step: ${statusMessage || 'unknown'})`);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("RAG pipeline error:", err);
+      setError(`${msg}`);
     } finally {
       setIsLoading(false);
       setStatusMessage("");
@@ -130,7 +158,7 @@ export function useRAG() {
     query,
     setQuery,
     provider,
-    setProvider,
+    setProvider: setProviderWithStorage,
     apiKey,
     setApiKey,
   };

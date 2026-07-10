@@ -25,6 +25,10 @@ const PROVIDER_CONFIG: Record<
     label: "Local (Free \u2014 No Key Required)",
     models: [],
   },
+  openai: {
+    label: "OpenAI",
+    models: ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
+  },
   openrouter: {
     label: "OpenRouter",
     models: [
@@ -78,6 +82,7 @@ export function LLMConfigPanel({
 
   const handleProviderChange = (value: string) => {
     const newProvider = value as LLMProvider;
+    sessionStorage.setItem("emotion-rag-provider", newProvider);
     onProviderChange(newProvider);
     setSelectedModel(
       PROVIDER_CONFIG[newProvider].models[0] || ""

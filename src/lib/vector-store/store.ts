@@ -6,8 +6,15 @@ class VectorStore {
 
   async loadIndex(strategy: ChunkingStrategy): Promise<void> {
     const response = await fetch(`/index/${strategy}.json`);
-    const data = await response.json();
-    this.chunks = data as Chunk[];
+    if (!response.ok) {
+      throw new Error(`Failed to load index: HTTP ${response.status}`);
+    }
+    const text = await response.text();
+    try {
+      this.chunks = JSON.parse(text) as Chunk[];
+    } catch (e) {
+      throw new Error(`Failed to parse index JSON (${text.slice(0, 100)}...)`);
+    }
   }
 
   query(

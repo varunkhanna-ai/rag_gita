@@ -1,3 +1,5 @@
+import * as fs from "fs/promises";
+import * as path from "path";
 import matter from "gray-matter";
 import { marked } from "marked";
 import { ParsedDocument } from "@/types";
@@ -6,13 +8,12 @@ export async function parseMarkdown(
   filePath: string
 ): Promise<ParsedDocument[]> {
   try {
-    const response = await fetch(filePath);
-    const fileContent = await response.text();
+    const fileContent = await fs.readFile(filePath, "utf-8");
     const { data: frontmatter, content } = matter(fileContent);
     const tokens = marked.lexer(content);
 
     const results: ParsedDocument[] = [];
-    const fileName = filePath.split("/").pop() || filePath;
+    const fileName = path.basename(filePath);
     let currentHeading: string | undefined;
 
     for (const token of tokens) {
@@ -24,7 +25,7 @@ export async function parseMarkdown(
         token.type === "blockquote"
       ) {
         const text = (token as { text?: string; raw?: string }).text || (token as { raw: string }).raw;
-        if (text.trim()) {
+        if (text && text.trim()) {
           results.push({
             text: text.trim(),
             sourceFile: fileName,

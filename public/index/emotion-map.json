@@ -1,22 +1,32 @@
 {
   "simple": {
-    "Happy": 427,
-    "Sad": 170,
-    "Protection": 130,
-    "Loneliness": 364,
-    "Anger": 52,
-    "Anxiety": 147,
+    "Loneliness": 361,
+    "Protection": 120,
+    "Anger": 55,
+    "Happy": 415,
+    "Sad": 159,
+    "Anxiety": 130,
     "Peace": 51,
     "Laziness": 4
   },
   "fixed-parent-child": {
-    "Happy": 852,
-    "Sad": 250,
-    "Protection": 159,
     "Loneliness": 512,
+    "Protection": 158,
     "Anger": 59,
+    "Happy": 851,
+    "Sad": 249,
     "Anxiety": 194,
     "Peace": 68,
+    "Laziness": 4
+  },
+  "recursive-parent-child": {
+    "Loneliness": 511,
+    "Protection": 157,
+    "Anger": 53,
+    "Happy": 1003,
+    "Sad": 271,
+    "Anxiety": 216,
+    "Peace": 71,
     "Laziness": 4
   }
 }

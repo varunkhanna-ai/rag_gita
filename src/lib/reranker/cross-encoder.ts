@@ -14,7 +14,7 @@ class CrossEncoderReranker {
     try {
       this.model = (await pipeline(
         "text-classification" as PipelineType,
-        "Xenova/cross-encoder/ms-marco-MiniLM-L-6-v2"
+        "Xenova/ms-marco-MiniLM-L-6-v2"
       )) as TextClassificationPipeline;
       this.loaded = true;
     } catch (error) {
@@ -30,26 +30,29 @@ class CrossEncoderReranker {
   ): Promise<RetrievalResult[]> {
     if (!this.model) await this.load();
 
-    const pairs: [string, string][] = candidates.map((c) => [query, c.text]);
+    // Cross-encoders score a (query, passage) pair jointly, which the generic
+    // text-classification pipeline doesn't support (it only tokenizes single
+    // sequences). So the tokenizer/model are driven directly with `text_pair`,
+    // matching how transformers.js's own pair-based pipelines do it internally.
+    const tokenizer = this.model!.tokenizer;
+    const sequenceModel = this.model!.model;
 
-    const scores = await this.model!((pairs as unknown) as string[]);
+    const scores: number[] = [];
+    for (const candidate of candidates) {
+      const inputs = tokenizer(query, {
+        text_pair: candidate.text,
+        padding: true,
+        truncation: true,
+      });
+      const output = await sequenceModel(inputs);
+      scores.push(output.logits.data[0]);
+    }
 
-    const results: RetrievalResult[] = candidates.map((chunk, i) => {
-      const scoreItem = Array.isArray(scores) ? scores[i] : null;
-      const crossEncoderScore = scoreItem
-        ? typeof scoreItem === "object" && "score" in scoreItem
-          ? (scoreItem as { score: number }).score
-          : typeof scoreItem === "number"
-            ? scoreItem
-            : 0
-        : 0;
-
-      return {
-        chunk: { ...chunk },
-        cosineScore: chunk._score || 0,
-        crossEncoderScore,
-      };
-    });
+    const results: RetrievalResult[] = candidates.map((chunk, i) => ({
+      chunk: { ...chunk },
+      cosineScore: chunk._score || 0,
+      crossEncoderScore: scores[i],
+    }));
 
     results.sort(
       (a, b) => (b.crossEncoderScore || 0) - (a.crossEncoderScore || 0)

@@ -4,6 +4,33 @@ import { tagChunksWithEmotions } from "@/lib/emotion/filter";
 // Recursive splitting: given text and target size, split by separators in order.
 // Try largest separator first; if a piece is still too big, try next smaller separator.
 // When no separators remain, fall back to character-level splitting.
+//
+// Splitting alone isn't enough: a separator like " " can shatter a paragraph into
+// one piece per word. After splitting, adjacent under-sized pieces are greedily
+// merged back together (up to targetSize) so chunks stay close to the target
+// instead of collapsing to word- or character-level fragments.
+
+function mergePieces(
+  pieces: string[],
+  separator: string,
+  targetSize: number
+): string[] {
+  const merged: string[] = [];
+  let current = "";
+
+  for (const piece of pieces) {
+    const candidate = current ? current + separator + piece : piece;
+    if (candidate.length <= targetSize || !current) {
+      current = candidate;
+    } else {
+      merged.push(current);
+      current = piece;
+    }
+  }
+  if (current) merged.push(current);
+
+  return merged;
+}
 
 function recursiveSplit(
   text: string,
@@ -25,14 +52,25 @@ function recursiveSplit(
   const rest = separators.slice(1);
   const pieces = text.split(sep);
   const result: string[] = [];
+  let pending: string[] = [];
+
+  const flushPending = () => {
+    if (pending.length) {
+      result.push(...mergePieces(pending, sep, targetSize));
+      pending = [];
+    }
+  };
 
   for (const piece of pieces) {
+    if (!piece.trim()) continue;
     if (piece.length <= targetSize) {
-      if (piece.trim()) result.push(piece);
+      pending.push(piece);
     } else {
+      flushPending();
       result.push(...recursiveSplit(piece, targetSize, rest));
     }
   }
+  flushPending();
 
   return result;
 }

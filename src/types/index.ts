@@ -32,7 +32,7 @@ export type ChunkingStrategy =
   | "fixed-parent-child"
   | "recursive-parent-child";
 
-export type LLMProvider = "local" | "openrouter" | "gemini" | "groq";
+export type LLMProvider = "local" | "openrouter" | "openai" | "gemini" | "groq";
 
 export interface ParsedDocument {
   text: string;

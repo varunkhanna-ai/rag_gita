@@ -1,8 +1,8 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 
-import { marked } from "marked";
-import matter from "gray-matter";
+import { parsePDF } from "../src/lib/parsers/pdf";
+import { parseMarkdown } from "../src/lib/parsers/markdown";
 import { createSimpleFixedChunks } from "../src/lib/chunking/simple-fixed";
 import { createFixedParentChildChunks } from "../src/lib/chunking/fixed-parent-child";
 import { createRecursiveParentChildChunks } from "../src/lib/chunking/recursive-parent-child";
@@ -11,40 +11,6 @@ import { Chunk, ParsedDocument } from "../src/types";
 
 const DOCS_DIR = path.resolve(__dirname, "..", "public", "documents");
 const INDEX_DIR = path.resolve(__dirname, "..", "public", "index");
-
-async function parseMarkdownContent(
-  content: string,
-  fileName: string
-): Promise<ParsedDocument[]> {
-  const { data: frontmatter, content: body } = matter(content);
-  const tokens = marked.lexer(body);
-  const results: ParsedDocument[] = [];
-  let currentHeading: string | undefined;
-
-  for (const token of tokens) {
-    if (token.type === "heading") {
-      currentHeading = (token as { text: string }).text;
-    } else if (
-      token.type === "paragraph" ||
-      token.type === "text" ||
-      token.type === "blockquote"
-    ) {
-      const text =
-        (token as { text?: string; raw?: string }).text ||
-        (token as { raw: string }).raw;
-      if (text && text.trim()) {
-        results.push({
-          text: text.trim(),
-          sourceFile: fileName,
-          heading: currentHeading,
-          frontmatter: { ...frontmatter },
-        });
-      }
-    }
-  }
-
-  return results;
-}
 
 async function parseDocuments(): Promise<ParsedDocument[]> {
   const files = await fs.readdir(DOCS_DIR);
@@ -55,11 +21,13 @@ async function parseDocuments(): Promise<ParsedDocument[]> {
     const filePath = path.join(DOCS_DIR, file);
 
     if (ext === ".pdf") {
-      console.log(`  Skipping large PDF: ${file}`);
+      console.log(`  Parsing PDF: ${file}`);
+      const docs = await parsePDF(filePath);
+      console.log(`    ${docs.length} pages with extractable text`);
+      allDocs.push(...docs);
     } else if (ext === ".md") {
       console.log(`  Parsing MD: ${file}`);
-      const content = await fs.readFile(filePath, "utf-8");
-      const docs = await parseMarkdownContent(content, file);
+      const docs = await parseMarkdown(filePath);
       console.log(`    ${docs.length} sections extracted`);
       allDocs.push(...docs);
     } else {
@@ -85,7 +53,14 @@ async function buildIndex() {
 
   const strategies: Record<string, (docs: ParsedDocument[]) => Chunk[]> = {
     simple: (d) => createSimpleFixedChunks(d, 3000, 200),
-    "fixed-parent-child": (d) => createFixedParentChildChunks(d, { parentChunkSize: 2000, parentOverlap: 200, childChunkSize: 600, childOverlap: 100 }),
+    "fixed-parent-child": (d) =>
+      createFixedParentChildChunks(d, {
+        parentChunkSize: 2000,
+        parentOverlap: 200,
+        childChunkSize: 600,
+        childOverlap: 100,
+      }),
+    "recursive-parent-child": (d) => createRecursiveParentChildChunks(d),
   };
 
   const emotionMap: Record<string, Record<string, number>> = {};

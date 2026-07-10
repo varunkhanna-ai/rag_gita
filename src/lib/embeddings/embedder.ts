@@ -31,7 +31,10 @@ class Embedder {
     });
 
     const data = output.data as Float32Array;
-    return Array.from(data);
+    // Round to 6 decimals: float32 only has ~7 significant digits of real
+    // precision, but JSON.stringify on a float64-promoted value prints ~17
+    // digits, which bloats the committed index files for no accuracy gain.
+    return Array.from(data, (v) => Math.round(v * 1e6) / 1e6);
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {

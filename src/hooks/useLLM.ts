@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { LLMProvider, RetrievalResult } from "@/types";
 import { LocalLLM } from "@/lib/llm/local";
 import { OpenRouterLLM } from "@/lib/llm/openrouter";
+import { OpenAILLM } from "@/lib/llm/openai";
 import { GeminiLLM } from "@/lib/llm/gemini";
 import { GroqLLM } from "@/lib/llm/groq";
 
@@ -38,6 +39,10 @@ export function useLLM(provider: LLMProvider, apiKey?: string) {
           case "local":
             instance = new LocalLLM();
             await (instance as LocalLLM).load();
+            break;
+          case "openai":
+            if (!apiKey) throw new Error("API key required for OpenAI");
+            instance = new OpenAILLM(apiKey);
             break;
           case "openrouter":
             if (!apiKey) throw new Error("API key required for OpenRouter");

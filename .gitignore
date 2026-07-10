@@ -8,5 +8,6 @@ out
 Thumbs.db
 .vercel
 *.local
+tsconfig.tsbuildinfo
 
 public/documents/*.pdf
