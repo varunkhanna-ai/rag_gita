@@ -12,7 +12,7 @@ import { GroqLLM } from "@/lib/llm/groq";
 
 export function useRAG() {
   const [strategy, setStrategy] =
-    useState<ChunkingStrategy>("fixed-parent-child");
+    useState<ChunkingStrategy>("simple");
   const [emotion, setEmotion] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [provider, setProvider] = useState<LLMProvider>("local");
@@ -108,7 +108,8 @@ export function useRAG() {
       setAnswer(generatedAnswer);
       setSources(reranked);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const msg = err instanceof Error ? err.message : "An error occurred";
+      setError(`${msg} (Step: ${statusMessage || 'unknown'})`);
     } finally {
       setIsLoading(false);
       setStatusMessage("");

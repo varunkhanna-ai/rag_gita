@@ -1,9 +1,6 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 
-const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.mjs");
-pdfjsLib.GlobalWorkerOptions.workerSrc = require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs");
-
 import { marked } from "marked";
 import matter from "gray-matter";
 import { createSimpleFixedChunks } from "../src/lib/chunking/simple-fixed";
@@ -14,26 +11,6 @@ import { Chunk, ParsedDocument } from "../src/types";
 
 const DOCS_DIR = path.resolve(__dirname, "..", "public", "documents");
 const INDEX_DIR = path.resolve(__dirname, "..", "public", "index");
-
-async function parsePDFBuffer(
-  buffer: ArrayBuffer,
-  fileName: string
-): Promise<ParsedDocument[]> {
-  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-  const results: ParsedDocument[] = [];
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-    const text = textContent.items
-      .map((item: { str?: string }) => ("str" in item ? item.str : ""))
-      .join(" ");
-
-    results.push({ text, sourceFile: fileName, pageNumber: i });
-  }
-
-  return results;
-}
 
 async function parseMarkdownContent(
   content: string,
@@ -78,11 +55,7 @@ async function parseDocuments(): Promise<ParsedDocument[]> {
     const filePath = path.join(DOCS_DIR, file);
 
     if (ext === ".pdf") {
-      console.log(`  Parsing PDF: ${file}`);
-      const buffer = await fs.readFile(filePath);
-      const docs = await parsePDFBuffer(buffer.buffer, file);
-      console.log(`    ${docs.length} pages extracted`);
-      allDocs.push(...docs);
+      console.log(`  Skipping large PDF: ${file}`);
     } else if (ext === ".md") {
       console.log(`  Parsing MD: ${file}`);
       const content = await fs.readFile(filePath, "utf-8");
@@ -111,7 +84,7 @@ async function buildIndex() {
   console.log("Embedder loaded.");
 
   const strategies: Record<string, (docs: ParsedDocument[]) => Chunk[]> = {
-    simple: (d) => createSimpleFixedChunks(d, 800, 100),
+    simple: (d) => createSimpleFixedChunks(d, 3000, 200),
     "fixed-parent-child": (d) => createFixedParentChildChunks(d, { parentChunkSize: 2000, parentOverlap: 200, childChunkSize: 600, childOverlap: 100 }),
   };
 
