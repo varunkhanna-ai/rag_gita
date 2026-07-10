@@ -37,7 +37,7 @@ An interactive **Retrieval-Augmented Generation (RAG)** application that retriev
 
 ### Option 1: Deploy to Vercel (Fastest, ~2 min)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvarunkhanna-ai%2Flag_gita&project-name=emotion-rag&repo-name=rag_gita)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvarunkhanna-ai%2Frag_gita
 
 1. Click the button above
 2. Click **"Create"** (no env vars needed for local/free mode)
