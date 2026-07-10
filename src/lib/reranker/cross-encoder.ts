@@ -23,11 +23,15 @@ class CrossEncoderReranker {
     }
   }
 
+  /**
+   * Scores every candidate and returns both the full re-ranked list (for
+   * before/after comparisons) and the top-N slice (for generation context).
+   */
   async rerank(
     query: string,
     candidates: Chunk[],
     topN: number = 5
-  ): Promise<RetrievalResult[]> {
+  ): Promise<{ top: RetrievalResult[]; all: RetrievalResult[] }> {
     if (!this.model) await this.load();
 
     // Cross-encoders score a (query, passage) pair jointly, which the generic
@@ -58,7 +62,7 @@ class CrossEncoderReranker {
       (a, b) => (b.crossEncoderScore || 0) - (a.crossEncoderScore || 0)
     );
 
-    return results.slice(0, topN);
+    return { top: results.slice(0, topN), all: results };
   }
 }
 

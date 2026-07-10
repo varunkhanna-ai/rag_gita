@@ -12,6 +12,24 @@ import { Chunk, ParsedDocument } from "../src/types";
 const DOCS_DIR = path.resolve(__dirname, "..", "public", "documents");
 const INDEX_DIR = path.resolve(__dirname, "..", "public", "index");
 
+// Overlap (in characters) each strategy's *indexed* unit uses. Recursive
+// splitting has no fixed overlap — it merges at semantic boundaries instead —
+// so it's reported as 0.
+const STRATEGY_OVERLAP: Record<string, number> = {
+  simple: 200,
+  "fixed-parent-child": 100,
+  "recursive-parent-child": 0,
+};
+
+function median(nums: number[]): number {
+  if (nums.length === 0) return 0;
+  const sorted = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+    : sorted[mid];
+}
+
 async function parseDocuments(): Promise<ParsedDocument[]> {
   const files = await fs.readdir(DOCS_DIR);
   const allDocs: ParsedDocument[] = [];
@@ -103,21 +121,27 @@ async function buildIndex() {
   await fs.writeFile(emotionMapPath, JSON.stringify(emotionMap, null, 2));
   console.log(`\nEmotion map saved to ${emotionMapPath}`);
 
+  const stats: Record<string, { chunks: number; medianSize: number; overlap: number }> = {};
+
   console.log("\n=== Build Statistics ===");
   console.log(`Total documents: ${docs.length}`);
   for (const [strategyName] of Object.entries(strategies)) {
     const indexPath = path.join(INDEX_DIR, `${strategyName}.json`);
     const data = JSON.parse(await fs.readFile(indexPath, "utf-8")) as Chunk[];
-    const avgSize =
-      data.length > 0
-        ? Math.round(
-            data.reduce((sum, c) => sum + c.text.length, 0) / data.length
-          )
-        : 0;
+    const medianSize = median(data.map((c) => c.text.length));
+    stats[strategyName] = {
+      chunks: data.length,
+      medianSize,
+      overlap: STRATEGY_OVERLAP[strategyName] ?? 0,
+    };
     console.log(
-      `${strategyName}: ${data.length} chunks, avg size: ${avgSize} chars`
+      `${strategyName}: ${data.length} chunks, median size: ${medianSize} chars, overlap: ${stats[strategyName].overlap}`
     );
   }
+
+  const statsPath = path.join(INDEX_DIR, "stats.json");
+  await fs.writeFile(statsPath, JSON.stringify(stats, null, 2));
+  console.log(`Stats saved to ${statsPath}`);
 }
 
 async function main() {

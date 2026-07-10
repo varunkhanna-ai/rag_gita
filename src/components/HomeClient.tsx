@@ -1,20 +1,34 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Send } from "lucide-react";
 import { EmotionSelector } from "@/components/EmotionSelector";
 import { StrategySelector } from "@/components/StrategySelector";
 import { QueryInput } from "@/components/QueryInput";
+import { QueryModeToggle, QueryMode } from "@/components/QueryModeToggle";
 import { AnswerDisplay } from "@/components/AnswerDisplay";
 import { SourcePanel } from "@/components/SourcePanel";
 import { LLMConfigPanel } from "@/components/LLMConfigPanel";
+import { ChunkingComparison } from "@/components/ChunkingComparison";
+import { RetrievalPipeline } from "@/components/RetrievalPipeline";
+import { RerankingComparison } from "@/components/RerankingComparison";
+import { EmotionHeatmap } from "@/components/EmotionHeatmap";
+import { PerformanceStats } from "@/components/PerformanceStats";
+import { ResponseHistory } from "@/components/ResponseHistory";
+import { EMOTION_COLORS } from "@/lib/emotion/tags";
+import { cn } from "@/lib/utils";
 import { useRAG } from "@/hooks/useRAG";
 
 export default function HomeClient() {
   const {
     answer,
     sources,
+    preRerank,
+    rerankedAll,
+    timing,
+    history,
     isLoading,
     error,
     statusMessage,
@@ -30,6 +44,20 @@ export default function HomeClient() {
     apiKey,
     setApiKey,
   } = useRAG();
+
+  const [mode, setMode] = useState<QueryMode>("custom");
+  const [presetValue, setPresetValue] = useState("");
+
+  const handleModeChange = (newMode: QueryMode) => {
+    setMode(newMode);
+    setQuery("");
+    setPresetValue("");
+  };
+
+  const handleSelectPreset = (question: string) => {
+    setPresetValue(question);
+    setQuery(question);
+  };
 
   const handleModelChange = (_model: string) => {};
 
@@ -67,18 +95,64 @@ export default function HomeClient() {
                   onModelChange={handleModelChange}
                 />
               </div>
+              <div className="border-t pt-4">
+                <ChunkingComparison />
+              </div>
             </div>
           </aside>
 
           <div className="lg:col-span-3 space-y-6">
-            <QueryInput
-              value={query}
-              onChange={setQuery}
-              onSubmit={runRAG}
-              isLoading={isLoading}
-              emotion={emotion}
-              onClearEmotion={() => setEmotion(null)}
-            />
+            <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-3">
+              <QueryModeToggle
+                mode={mode}
+                onModeChange={handleModeChange}
+                emotion={emotion}
+                presetValue={presetValue}
+                onSelectPreset={handleSelectPreset}
+              />
+
+              {mode === "custom" ? (
+                <QueryInput
+                  value={query}
+                  onChange={setQuery}
+                  onSubmit={runRAG}
+                  isLoading={isLoading}
+                  emotion={emotion}
+                  onClearEmotion={() => setEmotion(null)}
+                />
+              ) : (
+                <div className="space-y-3">
+                  {emotion && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">
+                        Filtering by:
+                      </span>
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border cursor-pointer",
+                          EMOTION_COLORS[emotion]
+                        )}
+                        onClick={() => setEmotion(null)}
+                      >
+                        {emotion}
+                        <span className="ml-1 hover:font-bold">&times;</span>
+                      </span>
+                    </div>
+                  )}
+                  <Button
+                    onClick={runRAG}
+                    disabled={isLoading || !query.trim()}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    Ask
+                  </Button>
+                </div>
+              )}
+            </div>
 
             {error && (
               <Alert variant="destructive">
@@ -100,6 +174,31 @@ export default function HomeClient() {
             />
 
             {sources.length > 0 && <SourcePanel sources={sources} />}
+
+            {timing && (
+              <RetrievalPipeline
+                query={query}
+                emotion={emotion}
+                provider={provider}
+                timing={timing}
+                preRerank={preRerank}
+              />
+            )}
+
+            {rerankedAll.length > 0 && (
+              <RerankingComparison
+                preRerank={preRerank}
+                rerankedAll={rerankedAll}
+              />
+            )}
+
+            {sources.length > 0 && <EmotionHeatmap sources={sources} />}
+
+            {timing && (
+              <PerformanceStats timing={timing} history={history} />
+            )}
+
+            <ResponseHistory history={history} />
           </div>
         </div>
       </main>

@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { ChunkingStrategy, LLMProvider, RetrievalResult } from "@/types";
+import {
+  ChunkingStrategy,
+  LLMProvider,
+  RetrievalResult,
+  PipelineTiming,
+  QueryHistoryEntry,
+} from "@/types";
 import { vectorStore } from "@/lib/vector-store/store";
 import { reranker } from "@/lib/reranker/cross-encoder";
 import { embedder } from "@/lib/embeddings/embedder";
@@ -10,6 +16,25 @@ import { OpenRouterLLM } from "@/lib/llm/openrouter";
 import { OpenAILLM } from "@/lib/llm/openai";
 import { GeminiLLM } from "@/lib/llm/gemini";
 import { GroqLLM } from "@/lib/llm/groq";
+
+function buildVariationHint(
+  query: string,
+  emotion: string | null,
+  history: QueryHistoryEntry[]
+): string | undefined {
+  const normalized = query.trim().toLowerCase();
+  const priorAttempts = history.filter(
+    (h) => h.query.trim().toLowerCase() === normalized
+  );
+  if (priorAttempts.length === 0) return undefined;
+
+  const sameEmotionBefore = priorAttempts.some((h) => h.emotion === emotion);
+  return sameEmotionBefore
+    ? "Provide a different perspective than before — draw on different aspects of the context rather than repeating the same points."
+    : `Provide a different perspective than before, focusing on what resonates with a ${
+        emotion || "general"
+      } sentiment.`;
+}
 
 export function useRAG() {
   const [strategy, setStrategy] =
@@ -39,6 +64,10 @@ export function useRAG() {
 
   const [answer, setAnswer] = useState("");
   const [sources, setSources] = useState<RetrievalResult[]>([]);
+  const [preRerank, setPreRerank] = useState<RetrievalResult[]>([]);
+  const [rerankedAll, setRerankedAll] = useState<RetrievalResult[]>([]);
+  const [timing, setTiming] = useState<PipelineTiming | null>(null);
+  const [history, setHistory] = useState<QueryHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
@@ -50,16 +79,31 @@ export function useRAG() {
     setError(null);
     setAnswer("");
     setSources([]);
+    setPreRerank([]);
+    setRerankedAll([]);
+    setTiming(null);
+
+    const pipelineStart = performance.now();
 
     try {
       await vectorStore.loadIndex(strategy);
 
       setStatusMessage("Embedding query...");
+      const embeddingStart = performance.now();
       await embedder.load();
       const queryEmbedding = await embedder.embed(query);
+      const embeddingMs = performance.now() - embeddingStart;
 
       setStatusMessage("Retrieving chunks...");
+      const retrievalStart = performance.now();
       const candidates = vectorStore.query(queryEmbedding, emotion, 20);
+      const retrievalMs = performance.now() - retrievalStart;
+
+      const preRerankResults: RetrievalResult[] = candidates.map((c) => ({
+        chunk: c,
+        cosineScore: c._score || 0,
+      }));
+      setPreRerank(preRerankResults);
 
       if (candidates.length === 0) {
         setAnswer("No relevant passages found for your query.");
@@ -69,15 +113,24 @@ export function useRAG() {
       }
 
       setStatusMessage("Re-ranking...");
-      const reranked = await reranker.rerank(query, candidates, 5);
+      const rerankStart = performance.now();
+      const { top: reranked, all: rerankedAll } = await reranker.rerank(
+        query,
+        candidates,
+        5
+      );
+      const rerankingMs = performance.now() - rerankStart;
 
       setStatusMessage("Generating answer...");
+      const generationStart = performance.now();
 
       const contextResults: RetrievalResult[] = reranked.map((r) => ({
         chunk: r.chunk,
         cosineScore: r.cosineScore,
         crossEncoderScore: r.crossEncoderScore,
       }));
+
+      const variationHint = buildVariationHint(query, emotion, history);
 
       let generatedAnswer: string;
 
@@ -88,7 +141,8 @@ export function useRAG() {
           generatedAnswer = await localLLM.generate(
             query,
             contextResults,
-            emotion
+            emotion,
+            variationHint
           );
           break;
         }
@@ -97,7 +151,8 @@ export function useRAG() {
           generatedAnswer = await new OpenAILLM(apiKey).generate(
             query,
             contextResults,
-            emotion
+            emotion,
+            variationHint
           );
           break;
         }
@@ -106,7 +161,8 @@ export function useRAG() {
           generatedAnswer = await new OpenRouterLLM(apiKey).generate(
             query,
             contextResults,
-            emotion
+            emotion,
+            variationHint
           );
           break;
         }
@@ -115,7 +171,8 @@ export function useRAG() {
           generatedAnswer = await new GeminiLLM(apiKey).generate(
             query,
             contextResults,
-            emotion
+            emotion,
+            variationHint
           );
           break;
         }
@@ -124,7 +181,8 @@ export function useRAG() {
           generatedAnswer = await new GroqLLM(apiKey).generate(
             query,
             contextResults,
-            emotion
+            emotion,
+            variationHint
           );
           break;
         }
@@ -132,8 +190,37 @@ export function useRAG() {
           throw new Error(`Unknown provider: ${provider}`);
       }
 
+      const generationMs = performance.now() - generationStart;
+      const totalMs = performance.now() - pipelineStart;
+      const finalTiming: PipelineTiming = {
+        embeddingMs,
+        retrievalMs,
+        rerankingMs,
+        generationMs,
+        totalMs,
+      };
+
       setAnswer(generatedAnswer);
       setSources(reranked);
+      setRerankedAll(rerankedAll);
+      setTiming(finalTiming);
+
+      setHistory((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          timestamp: Date.now(),
+          query,
+          emotion,
+          strategy,
+          provider,
+          answer: generatedAnswer,
+          sources: reranked,
+          preRerank: preRerankResults,
+          rerankedAll,
+          timing: finalTiming,
+        },
+      ]);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("RAG pipeline error:", err);
@@ -142,11 +229,15 @@ export function useRAG() {
       setIsLoading(false);
       setStatusMessage("");
     }
-  }, [query, strategy, emotion, provider, apiKey]);
+  }, [query, strategy, emotion, provider, apiKey, history]);
 
   return {
     answer,
     sources,
+    preRerank,
+    rerankedAll,
+    timing,
+    history,
     isLoading,
     error,
     statusMessage,

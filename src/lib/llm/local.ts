@@ -1,5 +1,6 @@
 import { pipeline, PipelineType, TextGenerationPipeline } from "@xenova/transformers";
 import { RetrievalResult } from "@/types";
+import { buildPrompt } from "./prompt";
 
 class LocalLLM {
   private model: TextGenerationPipeline | null = null;
@@ -26,23 +27,12 @@ class LocalLLM {
   async generate(
     query: string,
     contextChunks: RetrievalResult[],
-    emotion: string | null
+    emotion: string | null,
+    variationHint?: string
   ): Promise<string> {
     if (!this.model) await this.load();
 
-    const context = contextChunks
-      .map((r) => r.chunk.parentText || r.chunk.text)
-      .join("\n\n");
-
-    const prompt =
-      "You are a wise, empathetic assistant. Use ONLY the following context to answer.\n\n" +
-      "Context:\n" +
-      context +
-      "\n\nQuestion: " +
-      query +
-      "\nEmotion: " +
-      (emotion || "General") +
-      "\n\nProvide a comforting, inspiring response that directly addresses the emotion. Keep it under 300 words.";
+    const prompt = buildPrompt(query, contextChunks, emotion, { variationHint });
 
     const result = await this.model!(prompt, {
       max_new_tokens: 512,

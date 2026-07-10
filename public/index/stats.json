@@ -1,0 +1,17 @@
+{
+  "simple": {
+    "chunks": 920,
+    "medianSize": 3000,
+    "overlap": 200
+  },
+  "fixed-parent-child": {
+    "chunks": 10162,
+    "medianSize": 248,
+    "overlap": 100
+  },
+  "recursive-parent-child": {
+    "chunks": 20661,
+    "medianSize": 134,
+    "overlap": 0
+  }
+}

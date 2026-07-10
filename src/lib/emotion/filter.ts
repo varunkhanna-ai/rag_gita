@@ -51,6 +51,30 @@ export function extractEmotionsFromText(text: string): string[] {
   return Array.from(matched).filter((e) => (EMOTIONS as readonly string[]).includes(e));
 }
 
+/**
+ * Keyword-match strength per emotion, normalized to 0-1. Used for the emotion
+ * heatmap, where a binary tag isn't enough to show relative intensity.
+ */
+export function computeEmotionStrengths(text: string): Record<string, number> {
+  const lower = text.toLowerCase();
+  const counts: Record<string, number> = {};
+
+  for (const emotion of EMOTIONS) {
+    counts[emotion] = 0;
+  }
+
+  for (const [keyword, emotion] of Object.entries(KEYWORD_MAP)) {
+    const matches = lower.split(keyword).length - 1;
+    counts[emotion] += matches;
+  }
+
+  const strengths: Record<string, number> = {};
+  for (const emotion of EMOTIONS) {
+    strengths[emotion] = Math.min(1, counts[emotion] / 3);
+  }
+  return strengths;
+}
+
 export function filterByEmotion(
   chunks: Chunk[],
   emotion: string | null

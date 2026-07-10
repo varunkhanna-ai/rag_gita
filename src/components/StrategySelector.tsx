@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Info } from "lucide-react";
-import { ChunkingStrategy } from "@/types";
+import { ChunkingStrategy, IndexStats } from "@/types";
 import { cn } from "@/lib/utils";
+import { fetchIndexStats } from "@/lib/vector-store/stats";
 
 const STRATEGIES: {
   value: ChunkingStrategy;
@@ -46,14 +47,26 @@ export function StrategySelector({
   selectedStrategy,
   onSelect,
 }: StrategySelectorProps) {
+  const [stats, setStats] = useState<IndexStats | null>(null);
+
+  useEffect(() => {
+    fetchIndexStats()
+      .then(setStats)
+      .catch((err) => console.error("Failed to load index stats:", err));
+  }, []);
+
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-slate-700">
         Chunking Strategy
       </h3>
+      <p className="text-xs text-slate-400">
+        Choose a strategy to see chunk details
+      </p>
       <div className="space-y-2">
         {STRATEGIES.map((s) => {
           const isSelected = selectedStrategy === s.value;
+          const strategyStats = stats?.[s.value];
           return (
             <button
               key={s.value}
@@ -86,6 +99,19 @@ export function StrategySelector({
                   </div>
                 </div>
               </div>
+
+              {isSelected && strategyStats && (
+                <div className="mt-2 pt-2 border-t border-indigo-200 text-xs text-indigo-700 space-y-0.5">
+                  <div>├─ Total Chunks: {strategyStats.chunks.toLocaleString()}</div>
+                  <div>├─ Chunk Size: ~{strategyStats.medianSize} chars (median)</div>
+                  <div>
+                    └─ Overlap:{" "}
+                    {strategyStats.overlap > 0
+                      ? `${strategyStats.overlap} chars`
+                      : "N/A (semantic boundaries)"}
+                  </div>
+                </div>
+              )}
             </button>
           );
         })}
