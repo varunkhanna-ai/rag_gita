@@ -13,6 +13,10 @@ const EMOTION_TONE: Record<string, string> = {
 
 export interface BuildPromptOptions {
   variationHint?: string;
+  /** Truncates joined context to this many characters. Needed for small
+   * local models with a limited context window (e.g. Qwen1.5-0.5B's 2048
+   * tokens) — API providers have much larger windows and don't need this. */
+  maxContextChars?: number;
 }
 
 export function buildPrompt(
@@ -21,9 +25,13 @@ export function buildPrompt(
   emotion: string | null,
   options: BuildPromptOptions = {}
 ): string {
-  const context = contextChunks
+  let context = contextChunks
     .map((r) => r.chunk.parentText || r.chunk.text)
     .join("\n\n");
+
+  if (options.maxContextChars && context.length > options.maxContextChars) {
+    context = context.slice(0, options.maxContextChars) + "...";
+  }
 
   const tone = emotion ? EMOTION_TONE[emotion] || "empathetic" : "empathetic";
 

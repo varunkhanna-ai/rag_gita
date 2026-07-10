@@ -176,8 +176,8 @@ export function LLMConfigPanel({
         {provider === "local" && (
           <div className="flex items-start gap-2 text-xs text-slate-500 bg-slate-100 p-2 rounded">
             <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-            Local mode downloads a ~600MB model on first use. Runs entirely in
-            your browser with no data leaving your machine.
+            Local mode downloads a model (a few hundred MB) on first use.
+            Runs entirely in your browser with no data leaving your machine.
           </div>
         )}
       </CollapsibleContent>
