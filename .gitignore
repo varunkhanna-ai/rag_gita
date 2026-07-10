@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+.env
+.env.local
+*.log
+.DS_Store
+Thumbs.db
+.vercel
+*.local
+
+public/documents/*.pdf

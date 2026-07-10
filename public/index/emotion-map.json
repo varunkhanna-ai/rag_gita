@@ -1,0 +1,22 @@
+{
+  "simple": {
+    "Happy": 741,
+    "Sad": 241,
+    "Protection": 154,
+    "Loneliness": 514,
+    "Anger": 59,
+    "Anxiety": 195,
+    "Peace": 70,
+    "Laziness": 4
+  },
+  "fixed-parent-child": {
+    "Happy": 852,
+    "Sad": 250,
+    "Protection": 159,
+    "Loneliness": 512,
+    "Anger": 59,
+    "Anxiety": 194,
+    "Peace": 68,
+    "Laziness": 4
+  }
+}
