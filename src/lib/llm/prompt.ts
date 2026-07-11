@@ -35,8 +35,18 @@ export function buildPrompt(
 
   const tone = emotion ? EMOTION_TONE[emotion] || "empathetic" : "empathetic";
 
+  const grammarGuidelines =
+    "IMPORTANT — Language and Grammar Rules:\n" +
+    "1. Use clear, grammatically correct English in every response.\n" +
+    "2. Write complete sentences with proper punctuation, capitalization, and paragraph breaks.\n" +
+    "3. Keep paragraphs concise — no more than 2-3 sentences each.\n" +
+    "4. Use a respectful, thoughtful, and measured tone.\n" +
+    "5. Avoid sentence fragments, run-on sentences, and informal abbreviations.";
+
   let prompt =
     "You are a wise, empathetic assistant. Use ONLY the following context to answer.\n\n" +
+    grammarGuidelines +
+    "\n\n" +
     "Context:\n" +
     context +
     "\n\nQuestion: " +

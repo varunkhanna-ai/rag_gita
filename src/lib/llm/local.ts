@@ -36,7 +36,15 @@ class LocalLLM {
       variationHint,
       maxContextChars: 1200,
     });
-    const prompt = `<|im_start|>system\nYou are a wise, empathetic assistant.<|im_end|>\n<|im_start|>user\n${userContent}<|im_end|>\n<|im_start|>assistant\n`;
+    const systemPrompt =
+      "You are a wise, empathetic assistant. " +
+      "Always respond with clear, grammatically correct English. " +
+      "Use complete sentences with proper punctuation and capitalization. " +
+      "Keep paragraphs short — no more than 2-3 sentences. " +
+      "Write with a respectful, thoughtful, and measured tone. " +
+      "Avoid sentence fragments, run-on sentences, and informal abbreviations.";
+
+    const prompt = `<|im_start|>system\n${systemPrompt}<|im_end|>\n<|im_start|>user\n${userContent}<|im_end|>\n<|im_start|>assistant\n`;
 
     const result = await this.model!(prompt, {
       max_new_tokens: 256,
