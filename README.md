@@ -154,6 +154,16 @@ The default uses **Transformers.js** with a small local LLM. Works fine for phil
 
 If you want faster responses, you can enable cloud providers. **Your API key is stored only in `sessionStorage`** (cleared when you close the browser tab).
 
+#### Cloud LLaMA (Free — No Key Required)
+```
+1. In the app, select "Cloud LLaMA (Free — No Key Required)"
+2. Run a query — no setup needed!
+3. The Groq API key lives on the server (never exposed in browser)
+4. Rate limits apply (30 RPM / 14,400 RPD on free tier)
+```
+
+**Note for self-hosting:** To use Cloud LLaMA in your own deployment, you need to add `GROQ_API_KEY` to your environment variables. Get a free key at https://console.groq.com/keys
+
 #### OpenRouter
 ```
 1. Get API key: https://openrouter.ai
@@ -175,8 +185,6 @@ If you want faster responses, you can enable cloud providers. **Your API key is 
 2. In the app, select "Groq"
 3. Paste your key
 ```
-
-**Security note:** Keys are never logged, saved to disk, or sent to any server except the cloud provider you choose.
 
 ---
 
