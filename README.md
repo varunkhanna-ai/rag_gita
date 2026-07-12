@@ -2,7 +2,7 @@
 
 An interactive **Retrieval-Augmented Generation (RAG)** application that retrieves passages from the Bhagavad Gita and generates answers with emotion-aware context. Learn how RAG works through interactive visualizations.
 
-**Live Demo:** [Deploy on Vercel](#deploy-on-vercel) | **Repository:** [github.com/varunkhanna-ai/rag_gita](https://github.com/varunkhanna-ai/rag_gita)
+**Live Demo:** [[Deploy on Vercel](#deploy-on-vercel)](https://rag-gita.vercel.app/) | **Repository:** [github.com/varunkhanna-ai/rag_gita](https://github.com/varunkhanna-ai/rag_gita)
 
 ---
 
