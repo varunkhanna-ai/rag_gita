@@ -24,6 +24,7 @@ const PROVIDER_LABEL: Record<LLMProvider, string> = {
   openrouter: "OpenRouter",
   gemini: "Gemini",
   groq: "Groq",
+  "cloud-llama": "Cloud LLaMA (Groq)",
 };
 
 export function RetrievalPipeline({
