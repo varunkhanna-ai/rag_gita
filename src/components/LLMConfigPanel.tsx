@@ -42,7 +42,11 @@ const PROVIDER_CONFIG: Record<
   },
   groq: {
     label: "Groq",
-    models: ["llama3-8b-8192", "mixtral-8x7b-32768"],
+    models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+  },
+  "cloud-llama": {
+    label: "Cloud LLaMA (Free — No Key Required)",
+    models: [],
   },
 };
 
@@ -88,7 +92,7 @@ export function LLMConfigPanel({
       PROVIDER_CONFIG[newProvider].models[0] || ""
     );
 
-    if (newProvider === "local") {
+    if (newProvider === "local" || newProvider === "cloud-llama") {
       onApiKeyChange("");
       setLocalKey("");
     }
@@ -123,7 +127,7 @@ export function LLMConfigPanel({
           </Select>
         </div>
 
-        {provider !== "local" && (
+        {provider !== "local" && provider !== "cloud-llama" && (
           <div className="space-y-2">
             <label className="text-xs font-medium text-slate-600 block">
               API Key
@@ -146,7 +150,7 @@ export function LLMConfigPanel({
           </div>
         )}
 
-        {provider !== "local" &&
+        {provider !== "local" && provider !== "cloud-llama" &&
           PROVIDER_CONFIG[provider].models.length > 0 && (
             <div>
               <label className="text-xs font-medium text-slate-600 block mb-1">
@@ -178,6 +182,13 @@ export function LLMConfigPanel({
             <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
             Local mode downloads a model (a few hundred MB) on first use.
             Runs entirely in your browser with no data leaving your machine.
+          </div>
+        )}
+
+        {provider === "cloud-llama" && (
+          <div className="flex items-start gap-2 text-xs text-slate-500 bg-slate-100 p-2 rounded">
+            <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            Cloud LLaMA runs on a remote server. No download needed. Rate limits may apply.
           </div>
         )}
       </CollapsibleContent>

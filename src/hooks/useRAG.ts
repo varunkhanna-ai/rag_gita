@@ -186,6 +186,25 @@ export function useRAG() {
           );
           break;
         }
+        case "cloud-llama": {
+          const res = await fetch("/api/llm/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query,
+              contextChunks: contextResults,
+              emotion,
+              variationHint,
+            }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || "Cloud LLM request failed");
+          }
+          const data = await res.json();
+          generatedAnswer = data.answer;
+          break;
+        }
         default:
           throw new Error(`Unknown provider: ${provider}`);
       }

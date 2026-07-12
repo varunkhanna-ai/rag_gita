@@ -56,6 +56,23 @@ export function useLLM(provider: LLMProvider, apiKey?: string) {
             if (!apiKey) throw new Error("API key required for Groq");
             instance = new GroqLLM(apiKey);
             break;
+          case "cloud-llama":
+            instance = {
+              generate: async (q, chunks, em) => {
+                const res = await fetch("/api/llm/generate", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ query: q, contextChunks: chunks, emotion: em }),
+                });
+                if (!res.ok) {
+                  const err = await res.json().catch(() => ({}));
+                  throw new Error(err.error || "Cloud LLM request failed");
+                }
+                const data = await res.json();
+                return data.answer;
+              },
+            };
+            break;
           default:
             throw new Error(`Unknown provider: ${provider}`);
         }
